@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demand-Paging Simulator</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Front Page -->
+    <div id="frontPage" class="front-page">
+        <div class="background-overlay"></div>
+        <div class="front-page-content">
+            <div class="left-section">
+                <h1 class="main-title">Demand<br>Paging<br>Simulator</h1>
+                <h2 class="subheading">Efficiently manage memory with real-time simulations.</h2>
+                <button id="getStartedBtn" class="start-btn"> Get Started <i class="fas fa-arrow-right"></i></button>
+            </div>
+            <div class="center-section">
+                <img src="elements.png" alt="Floating characters and numbers" class="floating-chars">
+            </div>
+            <div class="right-section">
+                <div class="description">
+                    <p>A simple tool that visually demonstrates how demand paging works in operating systems. It helps users understand page faults, memory access, and how different page replacement algorithms affect performance.</p>
+                </div>
+                <div class="developers">
+                    <h3>Developed by:</h3>
+                    <p>Paul Alarba</p>
+                    <p>Jazelle Tamayo</p>
+                    <p>Karylle Catubay</p>
+                    <p>Stephanie Echavez</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Algorithm Explanation Page -->
+    <div id="algorithmPage" class="second-page container" style="display: none;">
+        <div class="title">
+            <h1>How the Algorithm Works</h1>
+        </div>
+        
+        <div class="content-section">
+            <p>In all algorithms, if a page fault occurs, we first check if the frame has any free spaces. If so, we simply append the new page into the frame. If there are no free spaces, we do different methods according to different algorithms.</p>
+            
+            <div class="algorithm-container">
+                <div class="algorithm-box">
+                    <h3>First In First Out (FIFO)</h3>
+                    <p>Pages are replaced in the order they were loaded into memory. The page that has been in memory the longest is the first to be replaced when a page fault occurs.
+
+                        It's simple but not always efficient, as it doesn't consider how often or how recently pages are used.</p>
+                </div>
+                
+                <div class="algorithm-box">
+                    <h3>Least Recently Used (LRU)</h3>
+                    <p>This algorithm replaces the page that hasn't been used for the longest time. It tracks page usage, so when a page is accessed, it is marked as recently used.
+
+                        LRU performs better than FIFO in many cases, as it tries to keep the most recently accessed pages in memory.</p>
+                </div>
+                
+                <div class="algorithm-box">
+                    <h3>Optimal Page Replacement</h3>
+                    <p>The optimal algorithm replaces the page that will not be needed for the longest period of time in the future.
+
+                        This is ideal in theory because it minimizes page faults, but it requires knowledge of future page references, which isn't available in practice. It’s often used as a benchmark to compare the efficiency of other algorithms.</p>
+                </div>
+            </div>
+            
+            <div class="nav-buttons">
+                <button id="goToSimulatorBtn" class="btn">
+                    <i class="fas fa-arrow-right"></i> Go to Simulator
+                </button>
+            </div>
+        </div>
+    </div>
+   
+   <!-- Main Page -->
+   <div id="mainPage" class="main-page container" style="display: none;">
+    <div class="header">
+        <h1>Demand-Paging Simulator</h1>
+    </div>
+    
+    <div class="input-section">
+        <h2>Input Parameters</h2>
+        <div class="form-group">
+            <label for="refString">Reference String:</label>
+            <input type="text" id="refString" placeholder="e.g.,7 0 1 2 0 3 4 2 1/ A B C A D">
+            <small>Enter a sequence of page numbers or letters separated by spaces.</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="numFrames">Number of Frames:</label>
+            <input type="number" id="numFrames" min="1" value="3">
+        </div>
+        
+        <div class="form-group">
+            <label for="algorithm">Replacement Algorithm:</label>
+            <select id="algorithm">
+                <option value="FIFO">FIFO</option>
+                <option value="LRU">LRU</option>
+                <option value="Optimal">Optimal</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="button-group">
+        <button id="runBtn" class="btn"><i class="fas fa-play"></i> Run Simulation</button>
+        <button id="stopBtn" class="btn" disabled><i class="fas fa-pause"></i> Stop</button>
+        <button id="continueBtn" class="btn" disabled><i class="fas fa-play"></i> Continue</button>
+        <button id="resetBtn" class="btn"><i class="fas fa-redo"></i> Reset</button>
+        <button id="editBtn" class="btn"><i class="fas fa-edit"></i> Edit</button>
+        <button id="learnMoreBtn" class="btn"><i class="fas fa-book"></i> Learn About Algorithms</button>
+    </div>
+    
+    <!-- Status Bar moved here -->
+    <div id="statusBar" class="status-bar">
+        <i class="fas fa-info-circle"></i> Ready
+    </div>
+
+    <div class="visualization">
+        <h2>Visualization</h2>
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color hit"></div>
+                <span>Page Hit</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color fault"></div>
+                <span>Page Fault</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color replaced"></div>
+                <span>Replaced Page</span>
+            </div>
+        </div>
+        
+        <h3>Frames:</h3>
+            <div id="framesContainer" class="frames-container"></div>
+        
+        <div class="counters">
+            <div class="counter">
+                <i class="fas fa-times-circle"></i> Page Faults: <span id="pageFaults">0</span>
+            </div>
+            <div class="counter">
+                <i class="fas fa-check-circle"></i> Page Hits: <span id="pageHits">0</span>
+            </div>
+            <div class="counter">
+                <i class="fas fa-arrow-right"></i> Current Reference: <span id="currentRef">-</span>
+            </div>
+        </div>
+    </div>
+   </div>
+
+<!-- Hidden Audio Element for Sound Effect -->
+<audio id="clickSound" src="GetStarted.mp3" preload="auto"></audio>
+<audio id="stepSound" src="steps.mp3" preload="auto"></audio>
+<audio id="hitSound" src="hit.mp3" preload="auto"></audio>
+<audio id="faultSound" src="fault_sound.mp3" preload="auto"></audio>
+
+<script src="script.js"></script>
+</body>
+</html>
