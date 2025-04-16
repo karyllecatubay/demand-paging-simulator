@@ -46,6 +46,9 @@
             
             <div class="algorithm-container">
                 <div class="algorithm-box">
+                    <div class="algorithm-icon">
+                        <i class="fas fa-hourglass-start"></i>
+                    </div>
                     <h3>First In First Out (FIFO)</h3>
                     <p>Pages are replaced in the order they were loaded into memory. The page that has been in memory the longest is the first to be replaced when a page fault occurs.
 
@@ -53,6 +56,9 @@
                 </div>
                 
                 <div class="algorithm-box">
+                    <div class="algorithm-icon">
+                        <i class="fas fa-history"></i>
+                    </div>
                     <h3>Least Recently Used (LRU)</h3>
                     <p>This algorithm replaces the page that hasn't been used for the longest time. It tracks page usage, so when a page is accessed, it is marked as recently used.
 
@@ -60,16 +66,19 @@
                 </div>
                 
                 <div class="algorithm-box">
+                    <div class="algorithm-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
                     <h3>Optimal Page Replacement</h3>
                     <p>The optimal algorithm replaces the page that will not be needed for the longest period of time in the future.
 
-                        This is ideal in theory because it minimizes page faults, but it requires knowledge of future page references, which isn't available in practice. It’s often used as a benchmark to compare the efficiency of other algorithms.</p>
+                        This is ideal in theory because it minimizes page faults, but it requires knowledge of future page references, which isn't available in practice. It's often used as a benchmark to compare the efficiency of other algorithms.</p>
                 </div>
             </div>
             
             <div class="nav-buttons">
                 <button id="goToSimulatorBtn" class="btn">
-                    <i class="fas fa-arrow-right"></i> Go to Simulator
+                    Go to Simulator <i class="fas fa-arrow-right"></i>
                 </button>
             </div>
         </div>
@@ -85,22 +94,25 @@
         <h2>Input Parameters</h2>
         <div class="form-group">
             <label for="refString">Reference String:</label>
-            <input type="text" id="refString" placeholder="e.g.,7 0 1 2 0 3 4 2 1/ A B C A D">
+            <input type="text" id="refString" placeholder="e.g.,A B C A D">
             <small>Enter a sequence of page numbers or letters separated by spaces.</small>
         </div>
         
-        <div class="form-group">
-            <label for="numFrames">Number of Frames:</label>
-            <input type="number" id="numFrames" min="1" value="3">
-        </div>
-        
-        <div class="form-group">
-            <label for="algorithm">Replacement Algorithm:</label>
-            <select id="algorithm">
-                <option value="FIFO">FIFO</option>
-                <option value="LRU">LRU</option>
-                <option value="Optimal">Optimal</option>
-            </select>
+        <!-- Side-by-side inputs container -->
+        <div class="side-by-side-inputs">
+            <div class="form-group">
+                <label for="numFrames">Number of Frames:</label>
+                <input type="number" id="numFrames" min="1" value="3">
+            </div>
+            
+            <div class="form-group">
+                <label for="algorithm">Replacement Algorithm:</label>
+                <select id="algorithm">
+                    <option value="FIFO">FIFO</option>
+                    <option value="LRU">LRU</option>
+                    <option value="Optimal">Optimal</option>
+                </select>
+            </div>
         </div>
     </div>
     
@@ -120,6 +132,7 @@
 
     <div class="visualization">
         <h2>Visualization</h2>
+        
         <div class="legend">
             <div class="legend-item">
                 <div class="legend-color hit"></div>
@@ -135,8 +148,15 @@
             </div>
         </div>
         
+        <div class="step-counter">
+            Step: <span id="currentStepDisplay">0</span> / <span id="totalStepsDisplay">0</span>
+        </div>
+        
+        <h3></h3>
+        <div id="refStringContainer" class="ref-string-container"></div>
+        
         <h3>Frames:</h3>
-            <div id="framesContainer" class="frames-container"></div>
+        <div id="framesContainer" class="frames-container"></div>
         
         <div class="counters">
             <div class="counter">
@@ -153,10 +173,8 @@
    </div>
 
 <!-- Hidden Audio Element for Sound Effect -->
-<audio id="clickSound" src="GetStarted.mp3" preload="auto"></audio>
-<audio id="stepSound" src="steps.mp3" preload="auto"></audio>
-<audio id="hitSound" src="hit.mp3" preload="auto"></audio>
-<audio id="faultSound" src="fault_sound.mp3" preload="auto"></audio>
+    <audio id="hitSound" src="hit.mp3" preload="auto"></audio>
+    <audio id="faultSound" src="fault (mp3cut.net).mp3" preload="auto"></audio>
 
 <script src="script.js"></script>
 </body>
