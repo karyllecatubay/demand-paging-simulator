@@ -18,10 +18,13 @@ const pageFaultsCounter = document.getElementById("pageFaults")
 const pageHitsCounter = document.getElementById("pageHits")
 const currentRefCounter = document.getElementById("currentRef")
 const framesContainer = document.getElementById("framesContainer")
+const refStringContainer = document.getElementById("refStringContainer")
 const clickSound = document.getElementById("clickSound")
 const stepSound = document.getElementById("stepSound")
 const hitSound = document.getElementById("hitSound")
 const faultSound = document.getElementById("faultSound")
+const currentStepDisplay = document.getElementById("currentStepDisplay")
+const totalStepsDisplay = document.getElementById("totalStepsDisplay")
 
 // Simulation Variables
 let referenceString = []
@@ -67,6 +70,9 @@ function checkDOMElements() {
     { element: pageHitsCounter, name: "pageHits" },
     { element: currentRefCounter, name: "currentRef" },
     { element: framesContainer, name: "framesContainer" },
+    { element: refStringContainer, name: "refStringContainer" },
+    { element: currentStepDisplay, name: "currentStepDisplay" },
+    { element: totalStepsDisplay, name: "totalStepsDisplay" },
   ]
 
   const missingElements = requiredElements.filter((item) => !item.element)
@@ -345,11 +351,49 @@ function startSimulation() {
 
     updateStatus("Simulation Running", "running")
     displayReferenceString()
+    initializeFrameRows()
+    
+    // Update step counter - Start with 0/total
+    currentStepDisplay.textContent = "0"
+    totalStepsDisplay.textContent = referenceString.length.toString()
+    
     runSimulationStep()
   } catch (error) {
     console.error("Error starting simulation:", error)
     updateStatus("Error starting simulation. Please try again.", "error")
     resetSimulation(false)
+  }
+}
+
+function initializeFrameRows() {
+  try {
+    if (!framesContainer) {
+      console.error("Frames container not found")
+      return
+    }
+
+    framesContainer.innerHTML = ""
+
+    // Create a row for each frame
+    for (let i = 0; i < numFrames; i++) {
+      const frameRow = document.createElement("div")
+      frameRow.className = "frame-row"
+      
+      const frameLabel = document.createElement("div")
+      frameLabel.className = "frame-label"
+      frameLabel.textContent = `Frame ${i}:`
+      frameRow.appendChild(frameLabel)
+      
+      const frameCells = document.createElement("div")
+      frameCells.className = "frame-cells"
+      frameCells.id = `frame-row-${i}`
+      frameRow.appendChild(frameCells)
+      
+      framesContainer.appendChild(frameRow)
+    }
+  } catch (error) {
+    console.error("Error initializing frame rows:", error)
+    updateStatus("Error initializing visualization", "error")
   }
 }
 
@@ -366,68 +410,45 @@ function runSimulationStep() {
     if (!simulationRunning) return
 
     currentStep++
-
-    // Safety check for array bounds
-    if (currentStep < 0 || currentStep >= referenceString.length + 1) {
-      console.error("Step index out of bounds:", currentStep, "Reference string length:", referenceString.length)
-      simulationComplete()
-      return
-    }
-
-    currentRefCounter.textContent = currentStep >= referenceString.length ? "-" : referenceString[currentStep]
-
+    
+    // FIX: Check if we've reached the end of the reference string before updating the step counter
     if (currentStep >= referenceString.length) {
       simulationComplete()
       return
     }
+    
+    // Update step counter - Show current step + 1 to start from 1 instead of 0
+    currentStepDisplay.textContent = (currentStep + 1).toString()
+
+    currentRefCounter.textContent = referenceString[currentStep]
 
     const currentPage = referenceString[currentStep]
     const framesCopy = [...frames]
     let replacedFrameIndex = -1
     let stepResult = ""
-    let stepExplanation = ""
 
     highlightCurrentStep(currentStep)
 
     const pageIndex = frames.indexOf(currentPage)
     if (pageIndex !== -1) {
-      // Page hit - stop any previous hit sound and play new one
+      // Page hit
       stopSound("hit")
       playSound("hit", hitSound)
 
       pageHits++
       pageHitsCounter.textContent = pageHits
       stepResult = "hit"
-      stepExplanation = `Page ${currentPage} already in Frame ${pageIndex + 1}`
 
       if (algorithm === "LRU") {
         lruStack = lruStack.filter((page) => page !== currentPage)
         lruStack.push(currentPage)
       }
-
-      const rowElement = createFrameRow(
-        currentPage,
-        framesCopy,
-        frames,
-        replacedFrameIndex,
-        stepResult,
-        stepExplanation,
-      )
-
-      // Delay animation to ensure DOM is ready
-      setTimeout(() => {
-        try {
-          const hitFrame = rowElement.querySelector(`.frame:nth-child(${pageIndex + 1})`)
-          const activeRef = document.querySelector(".ref-number.active")
-          if (hitFrame && activeRef) {
-            animatePageMovement(currentPage, activeRef, hitFrame, false)
-          }
-        } catch (animError) {
-          console.warn("Animation error:", animError)
-        }
-      }, 300)
+      
+      // Update the visualization for a hit
+      updateVisualization(currentPage, framesCopy, frames, pageIndex, -1, stepResult)
+      
     } else {
-      // Page fault - stop any previous fault sound and play new one
+      // Page fault
       stopSound("fault")
       playSound("fault", faultSound)
 
@@ -438,36 +459,17 @@ function runSimulationStep() {
       if (frames.includes(null)) {
         const emptyIndex = frames.indexOf(null)
         frames[emptyIndex] = currentPage
-        stepExplanation = `Page ${currentPage} loaded into empty Frame ${emptyIndex + 1}`
-
-        const rowElement = createFrameRow(
-          currentPage,
-          framesCopy,
-          frames,
-          replacedFrameIndex,
-          stepResult,
-          stepExplanation,
-        )
-
-        // Delay animation to ensure DOM is ready
-        setTimeout(() => {
-          try {
-            const targetFrame = rowElement.querySelectorAll(".frame")[emptyIndex]
-            const activeRef = document.querySelector(".ref-number.active")
-            if (targetFrame && activeRef) {
-              animatePageMovement(currentPage, activeRef, targetFrame, true)
-            }
-          } catch (animError) {
-            console.warn("Animation error:", animError)
-          }
-        }, 300)
-
+        
         if (algorithm === "FIFO") {
           fifoQueue.push({ page: currentPage, frameIndex: emptyIndex })
         }
         if (algorithm === "LRU") {
           lruStack.push(currentPage)
         }
+        
+        // Update visualization for a fault with empty frame
+        updateVisualization(currentPage, framesCopy, frames, -1, emptyIndex, stepResult)
+        
       } else {
         if (algorithm === "FIFO") {
           // Check if fifoQueue is empty (shouldn't happen, but just in case)
@@ -483,29 +485,7 @@ function runSimulationStep() {
           const replacedPage = frames[replacedFrameIndex]
           frames[replacedFrameIndex] = currentPage
           fifoQueue.push({ page: currentPage, frameIndex: replacedFrameIndex })
-          stepExplanation = `Page ${replacedPage} replaced with ${currentPage} in Frame ${replacedFrameIndex + 1}`
-
-          const rowElement = createFrameRow(
-            currentPage,
-            framesCopy,
-            frames,
-            replacedFrameIndex,
-            stepResult,
-            stepExplanation,
-          )
-
-          // Delay animation to ensure DOM is ready
-          setTimeout(() => {
-            try {
-              const targetFrame = rowElement.querySelectorAll(".frame")[replacedFrameIndex]
-              const activeRef = document.querySelector(".ref-number.active")
-              if (targetFrame && activeRef) {
-                animatePageMovement(currentPage, activeRef, targetFrame, true)
-              }
-            } catch (animError) {
-              console.warn("Animation error:", animError)
-            }
-          }, 300)
+          
         } else if (algorithm === "LRU") {
           // Check if lruStack is empty (shouldn't happen, but just in case)
           if (lruStack.length === 0) {
@@ -525,32 +505,9 @@ function runSimulationStep() {
             replacedFrameIndex = 0
           }
 
-          const replacedPage = frames[replacedFrameIndex]
           frames[replacedFrameIndex] = currentPage
           lruStack.push(currentPage)
-          stepExplanation = `Page ${replacedPage} replaced with ${currentPage} in Frame ${replacedFrameIndex + 1}`
-
-          const rowElement = createFrameRow(
-            currentPage,
-            framesCopy,
-            frames,
-            replacedFrameIndex,
-            stepResult,
-            stepExplanation,
-          )
-
-          // Delay animation to ensure DOM is ready
-          setTimeout(() => {
-            try {
-              const targetFrame = rowElement.querySelectorAll(".frame")[replacedFrameIndex]
-              const activeRef = document.querySelector(".ref-number.active")
-              if (targetFrame && activeRef) {
-                animatePageMovement(currentPage, activeRef, targetFrame, true)
-              }
-            } catch (animError) {
-              console.warn("Animation error:", animError)
-            }
-          }, 300)
+          
         } else if (algorithm === "Optimal") {
           let farthestNextUse = -1
           let pageToReplace = null
@@ -579,32 +536,11 @@ function runSimulationStep() {
             replacedFrameIndex = 0
           }
 
-          const replacedPage = frames[replacedFrameIndex]
           frames[replacedFrameIndex] = currentPage
-          stepExplanation = `Page ${replacedPage} replaced with ${currentPage} in Frame ${replacedFrameIndex + 1}`
-
-          const rowElement = createFrameRow(
-            currentPage,
-            framesCopy,
-            frames,
-            replacedFrameIndex,
-            stepResult,
-            stepExplanation,
-          )
-
-          // Delay animation to ensure DOM is ready
-          setTimeout(() => {
-            try {
-              const targetFrame = rowElement.querySelectorAll(".frame")[replacedFrameIndex]
-              const activeRef = document.querySelector(".ref-number.active")
-              if (targetFrame && activeRef) {
-                animatePageMovement(currentPage, activeRef, targetFrame, true)
-              }
-            } catch (animError) {
-              console.warn("Animation error:", animError)
-            }
-          }, 300)
         }
+        
+        // Update visualization for a fault with replacement
+        updateVisualization(currentPage, framesCopy, frames, -1, replacedFrameIndex, stepResult)
       }
     }
 
@@ -613,6 +549,78 @@ function runSimulationStep() {
     console.error("Error in simulation step:", error)
     updateStatus("Error in simulation. Please reset and try again.", "error")
     pauseSimulation()
+  }
+}
+
+function updateVisualization(currentPage, oldFrames, newFrames, hitIndex, replacedIndex, result) {
+  try {
+    // For each frame, add a new cell to show its current state
+    for (let i = 0; i < numFrames; i++) {
+      const frameCellsContainer = document.getElementById(`frame-row-${i}`)
+      if (!frameCellsContainer) {
+        console.error(`Frame cells container not found for frame ${i}`)
+        continue
+      }
+      
+      // Create a new cell for this step
+      const frameCell = document.createElement("div")
+      frameCell.className = "frame-cell"
+      
+      // Set the content and styling based on the frame state
+      const frameValue = newFrames[i]
+      
+      if (frameValue === null) {
+        frameCell.textContent = "-"
+        frameCell.classList.add("empty")
+      } else {
+        frameCell.textContent = frameValue
+        
+        // Add appropriate classes based on the result
+        if (result === "hit" && i === hitIndex) {
+          frameCell.classList.add("hit")
+          
+          // Animate the hit
+          setTimeout(() => {
+            try {
+              const activeRef = document.querySelector(".ref-number.active")
+              if (activeRef && frameCell) {
+                animatePageMovement(currentPage, activeRef, frameCell, false)
+              }
+            } catch (animError) {
+              console.warn("Animation error:", animError)
+            }
+          }, 300)
+          
+        } else if (result === "fault" && i === replacedIndex) {
+          frameCell.classList.add("fault")
+          
+          // If this was a replacement, add the replaced class
+          if (oldFrames[i] !== null) {
+            frameCell.classList.add("replaced")
+          }
+          
+          // Animate the fault
+          setTimeout(() => {
+            try {
+              const activeRef = document.querySelector(".ref-number.active")
+              if (activeRef && frameCell) {
+                animatePageMovement(currentPage, activeRef, frameCell, true)
+              }
+            } catch (animError) {
+              console.warn("Animation error:", animError)
+            }
+          }, 300)
+        }
+      }
+      
+      // Add to the frame row
+      frameCellsContainer.appendChild(frameCell)
+      
+      // Scroll to show the latest cell
+      frameCellsContainer.scrollLeft = frameCellsContainer.scrollWidth
+    }
+  } catch (error) {
+    console.error("Error updating visualization:", error)
   }
 }
 
@@ -672,9 +680,17 @@ function resetSimulation(resetInputs = true) {
     pageFaultsCounter.textContent = "0"
     pageHitsCounter.textContent = "0"
     currentRefCounter.textContent = "-"
+    
+    // Reset step counter to show 0/0 instead of 0/undefined
+    currentStepDisplay.textContent = "0"
+    totalStepsDisplay.textContent = "0"
 
     if (framesContainer) {
       framesContainer.innerHTML = ""
+    }
+
+    if (refStringContainer) {
+      refStringContainer.innerHTML = ""
     }
 
     updateStatus("Ready")
@@ -732,13 +748,12 @@ function updateStatus(message, type = "") {
 
 function displayReferenceString() {
   try {
-    if (!framesContainer) {
-      console.error("Frames container not found")
+    if (!refStringContainer) {
+      console.error("Reference string container not found")
       return
     }
 
-    const refStringDisplay = document.createElement("div")
-    refStringDisplay.className = "ref-string-display"
+    refStringContainer.innerHTML = ""
 
     if (!Array.isArray(referenceString)) {
       console.error("Reference string is not an array:", referenceString)
@@ -746,102 +761,16 @@ function displayReferenceString() {
       return
     }
 
-    referenceString.forEach((num, idx) => {
-      const numElement = document.createElement("div")
-      numElement.className = "ref-number"
-      numElement.textContent = num
-      refStringDisplay.appendChild(numElement)
+    referenceString.forEach((page, idx) => {
+      const pageElement = document.createElement("div")
+      pageElement.className = "ref-number"
+      pageElement.textContent = page
+      pageElement.setAttribute("data-index", idx.toString())
+      refStringContainer.appendChild(pageElement)
     })
-
-    framesContainer.innerHTML = ""
-    framesContainer.appendChild(refStringDisplay)
   } catch (error) {
     console.error("Error displaying reference string:", error)
     updateStatus("Error displaying reference string", "error")
-  }
-}
-
-// Update the createFrameRow function to improve alignment and add error handling
-function createFrameRow(currentPage, oldFrames, newFrames, replacedIndex, result, explanation) {
-  try {
-    if (!framesContainer) {
-      console.error("Frames container not found")
-      return null
-    }
-
-    const rowDiv = document.createElement("div")
-    rowDiv.className = "frame-row"
-
-    // Create a container for the step info to ensure consistent width
-    const stepInfoContainer = document.createElement("div")
-    stepInfoContainer.className = "step-info-container"
-
-    const stepInfo = document.createElement("div")
-    stepInfo.className = "step-info"
-    stepInfo.innerHTML = `<strong>Step ${currentStep + 1}:</strong> ${explanation}`
-    stepInfoContainer.appendChild(stepInfo)
-    rowDiv.appendChild(stepInfoContainer)
-
-    const framesDiv = document.createElement("div")
-    framesDiv.className = "frames-row"
-
-    // Safety check for numFrames
-    const safeNumFrames = isNaN(numFrames) || numFrames < 1 ? 3 : numFrames
-
-    for (let i = 0; i < safeNumFrames; i++) {
-      const frameDiv = document.createElement("div")
-      frameDiv.className = "frame"
-
-      // Safety check for array bounds
-      if (!newFrames || i >= newFrames.length) {
-        frameDiv.classList.add("empty")
-        frameDiv.textContent = "-"
-      } else if (newFrames[i] === null) {
-        frameDiv.classList.add("empty")
-        frameDiv.textContent = "-"
-      } else {
-        frameDiv.textContent = newFrames[i]
-      }
-
-      if (i === replacedIndex) {
-        frameDiv.classList.add("replaced")
-      }
-
-      if (result === "hit" && newFrames && i < newFrames.length && newFrames[i] === currentPage) {
-        frameDiv.classList.add("hit")
-      } else if (result === "fault" && newFrames && i < newFrames.length && newFrames[i] === currentPage) {
-        frameDiv.classList.add("fault")
-      }
-
-      framesDiv.appendChild(frameDiv)
-    }
-
-    rowDiv.appendChild(framesDiv)
-
-    const resultDiv = document.createElement("div")
-    resultDiv.className = `result ${result}`
-    resultDiv.textContent = result === "hit" ? "HIT" : "FAULT"
-    rowDiv.appendChild(resultDiv)
-
-    framesContainer.appendChild(rowDiv)
-
-    // Add fade-in animation
-    rowDiv.style.opacity = "0"
-    rowDiv.style.animation = "fadeIn 0.5s forwards"
-
-    // Scroll to the new row
-    setTimeout(() => {
-      try {
-        rowDiv.scrollIntoView({ behavior: "smooth", block: "nearest" })
-      } catch (scrollError) {
-        console.warn("Error scrolling to new row:", scrollError)
-      }
-    }, 100)
-
-    return rowDiv
-  } catch (error) {
-    console.error("Error creating frame row:", error)
-    return null
   }
 }
 
@@ -853,8 +782,12 @@ function simulationComplete() {
     simulationRunning = false
     clearTimeout(simulationInterval)
 
+    // FIX: Ensure the step counter shows the correct final step
+    currentStepDisplay.textContent = referenceString.length.toString()
+
     const totalReferences = pageFaults + pageHits
     const hitRatio = totalReferences > 0 ? (pageHits / totalReferences) * 100 : 0
+    const faultRatio = totalReferences > 0 ? (pageFaults / totalReferences) * 100 : 0
 
     runBtn.disabled = false
     stopBtn.disabled = true
@@ -877,6 +810,7 @@ function simulationComplete() {
           <p>Page Hits: ${pageHits}</p>
           <p>Page Faults: ${pageFaults}</p>
           <p>Hit Ratio: ${hitRatio.toFixed(2)}%</p>
+          <p>Fault Ratio: ${faultRatio.toFixed(2)}%</p>
       `
     framesContainer.appendChild(summaryDiv)
 
