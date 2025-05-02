@@ -11,7 +11,6 @@ const runBtn = document.getElementById("runBtn")
 const stopBtn = document.getElementById("stopBtn")
 const continueBtn = document.getElementById("continueBtn")
 const resetBtn = document.getElementById("resetBtn")
-const editBtn = document.getElementById("editBtn")
 const learnMoreBtn = document.getElementById("learnMoreBtn")
 const statusBar = document.getElementById("statusBar")
 const pageFaultsCounter = document.getElementById("pageFaults")
@@ -63,7 +62,6 @@ function checkDOMElements() {
     { element: stopBtn, name: "stopBtn" },
     { element: continueBtn, name: "continueBtn" },
     { element: resetBtn, name: "resetBtn" },
-    { element: editBtn, name: "editBtn" },
     { element: learnMoreBtn, name: "learnMoreBtn" },
     { element: statusBar, name: "statusBar" },
     { element: pageFaultsCounter, name: "pageFaults" },
@@ -164,7 +162,6 @@ function setupEventListeners() {
     stopBtn.addEventListener("click", pauseSimulation)
     continueBtn.addEventListener("click", continueSimulation)
     resetBtn.addEventListener("click", resetSimulation)
-    editBtn.addEventListener("click", editSimulation)
 
     // Algorithm page navigation
     learnMoreBtn.addEventListener("click", () => {
@@ -347,7 +344,6 @@ function startSimulation() {
     runBtn.disabled = true
     stopBtn.disabled = false
     continueBtn.disabled = true
-    editBtn.disabled = true
 
     updateStatus("Simulation Running", "running")
     displayReferenceString()
@@ -707,7 +703,6 @@ function resetSimulation(resetInputs = true) {
     runBtn.disabled = false
     stopBtn.disabled = true
     continueBtn.disabled = true
-    editBtn.disabled = false
   } catch (error) {
     console.error("Error resetting simulation:", error)
     updateStatus("Error resetting simulation", "error")
@@ -716,16 +711,6 @@ function resetSimulation(resetInputs = true) {
     runBtn.disabled = false
     stopBtn.disabled = true
     continueBtn.disabled = true
-  }
-}
-
-function editSimulation() {
-  try {
-    resetSimulation(false)
-    updateStatus("Edit Mode - Adjust parameters and run again")
-  } catch (error) {
-    console.error("Error entering edit mode:", error)
-    updateStatus("Error entering edit mode", "error")
   }
 }
 
@@ -792,7 +777,6 @@ function simulationComplete() {
     runBtn.disabled = false
     stopBtn.disabled = true
     continueBtn.disabled = true
-    editBtn.disabled = false
 
     updateStatus("Simulation Complete", "complete")
 
